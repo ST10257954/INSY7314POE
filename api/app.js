@@ -4,21 +4,27 @@ import rateLimit from "express-rate-limit";
 import cors from "cors";
 import morgan from "morgan";
 import hpp from "hpp";
-import mongoSanitize from "express-mongo-sanitize";
+import { sanitizeRequest } from "./middleware/sanitize.js";
 
 import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payments.js";
 
 const app = express();
 
+// Security middleware
 app.use(express.json({ limit: "100kb" }));
-app.use(helmet({ frameguard: { action: "deny" } }));
+app.use(
+  helmet({
+    frameguard: { action: "deny" },
+    crossOriginEmbedderPolicy: true,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 app.use(rateLimit({ windowMs: 60_000, max: 100 }));
 app.use(cors({ origin: true, credentials: false }));
 app.use(morgan("tiny"));
-
 app.use(hpp());
-app.use(mongoSanitize());
+app.use(sanitizeRequest);
 
 // Health check route
 app.get("/health", (_req, res) => res.json({ ok: true }));
@@ -30,4 +36,4 @@ app.use("/v1/payments", paymentRoutes);
 // Root route
 app.get("/", (_req, res) => res.json({ ok: true, service: "api" }));
 
-export default app;
+export default app; 
