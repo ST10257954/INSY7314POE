@@ -1,96 +1,79 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { registerUser } from "../lib/api.js";
-
-
-// keep backslashes literal for the pattern attribute
-const PASS_PATTERN = String.raw`^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_\-=\[\]{};':",.<>\/?]{8,}$`;
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Register() {
-  const nav = useNavigate();
-  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    name: "",
-    account: "",
+    fullName: "",
     email: "",
+    idNumber: "",
+    accountNumber: "",
     password: "",
   });
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  async function onSubmit(e) {
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSaving(true);
+    setMessage("");
+
     try {
-      await registerUser(form);
-      alert("Registered! Now log in.");
-      nav("/login");
+      await axios.post("https://localhost:3443/v1/auth/register", form);
+      setMessage("✅ Account created! Redirecting...");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
-      alert("Register failed: " + (err?.message || "Unknown error"));
-    } finally {
-      setSaving(false);
+      console.error(err);
+      setMessage("❌ Registration failed.");
     }
-  }
+  };
 
   return (
-    <section className="card">
-      <h1>Create account</h1>
-      <p className="sub">Open your digital wallet and start making payments.</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 text-white px-4">
+      <div className="bg-gray-900 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-700">
+        <h1 className="text-2xl font-bold mb-6 text-center text-indigo-400">
+          Create Customer Account
+        </h1>
 
-      <form className="form-grid" onSubmit={onSubmit}>
-        <div className="field">
-          <label htmlFor="r-name">Full name</label>
-          <input
-            id="r-name"
-            required
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="r-account">Account number (8–20 digits)</label>
-          <input
-            id="r-account"
-            required
-            pattern="^[0-9]{8,20}$"
-            placeholder="12345678"
-            value={form.account}
-            onChange={(e) => setForm({ ...form, account: e.target.value })}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="r-email">Email</label>
-          <input
-            id="r-email"
-            type="email"
-            required
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="r-pass">Password</label>
-          <input
-            id="r-pass"
-            type="password"
-            required
-            placeholder="At least 8 characters (letters + numbers)"
-            pattern={PASS_PATTERN}
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-          />
-        </div>
-
-        <div className="actions">
-          <button className="btn btn-primary" disabled={saving}>
-            {saving ? "Saving…" : "Register"}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {["fullName", "email", "idNumber", "accountNumber", "password"].map(
+            (field) => (
+              <div key={field}>
+                <label className="text-sm text-gray-300 capitalize">
+                  {field.replace(/([A-Z])/g, " $1")}
+                </label>
+                <input
+                  type={field === "password" ? "password" : "text"}
+                  name={field}
+                  required
+                  value={form[field]}
+                  onChange={handleChange}
+                  className="w-full mt-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+            )
+          )}
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg"
+          >
+            Register
           </button>
-          <Link className="btn btn-ghost" to="/login">
-            I already have an account
-          </Link>
+        </form>
+
+        {message && <p className="text-center mt-4">{message}</p>}
+
+        <div className="text-center mt-4">
+          <p className="text-gray-400 text-sm">
+            Already have an account?{" "}
+            <Link to="/login" className="text-indigo-400 hover:underline">
+              Login
+            </Link>
+          </p>
         </div>
-      </form>
-    </section>
+      </div>
+    </div>
   );
 }

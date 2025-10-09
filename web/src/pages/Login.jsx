@@ -1,53 +1,113 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { loginUser } from "../lib/api.js";
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate, Link } from "react-router-dom";
 
-export default function Login(){
-  const nav = useNavigate();
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ email:"", password:"" });
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("customer"); // default
+  const [message, setMessage] = useState("");
+  const navigate = useNavigate();
 
-  async function onSubmit(e){
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setSaving(true);
-    try{
-      const { token } = await loginUser(form);
-      localStorage.setItem("token", token);
-      nav("/payments");
-    }catch(err){
-      alert("Login failed: " + (err?.message || "Unknown error"));
-    }finally{
-      setSaving(false);
+    setMessage("");
+
+    try {
+      const endpoint =
+        role === "employee"
+          ? "https://localhost:3443/v1/employee/login"
+          : "https://localhost:3443/v1/auth/login";
+
+      const res = await axios.post(endpoint, { email, password });
+
+      if (role === "employee") {
+        localStorage.setItem("employeeToken", res.data.token);
+        setMessage("✅ Logged in as employee. Redirecting...");
+        setTimeout(() => navigate("/admin/dashboard"), 1500);
+      } else {
+        localStorage.setItem("token", res.data.token);
+        setMessage("✅ Logged in as customer. Redirecting...");
+        setTimeout(() => navigate("/payments"), 1500);
+      }
+    } catch (err) {
+      console.error(err);
+      setMessage("❌ Invalid login credentials or server error.");
     }
-  }
+  };
 
   return (
-    <section className="card">
-      <h1>Welcome back</h1>
-      <p className="sub">Sign in to view and create payments.</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 text-white px-4">
+      <div className="bg-gray-900 p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-700">
+        <h1 className="text-2xl font-bold mb-6 text-center text-indigo-400">
+          INSY7314 Bank Portal
+        </h1>
 
-      <form className="form-grid" onSubmit={onSubmit}>
-        <div className="field">
-          <label htmlFor="l-email">Email</label>
-          <input id="l-email" type="email" required
-            value={form.email}
-            onChange={e => setForm({...form, email: e.target.value})}/>
-        </div>
+        <form onSubmit={handleLogin} className="space-y-4">
+          {/* Role Selector */}
+          <div>
+            <label className="text-sm text-gray-300">Login as</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              <option value="customer">Customer</option>
+              <option value="employee">Employee</option>
+            </select>
+          </div>
 
-        <div className="field">
-          <label htmlFor="l-pass">Password</label>
-          <input id="l-pass" type="password" required
-            value={form.password}
-            onChange={e => setForm({...form, password: e.target.value})}/>
-        </div>
+          {/* Email */}
+          <div>
+            <label className="text-sm text-gray-300">Email</label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
 
-        <div className="actions">
-          <button className="btn btn-primary" disabled={saving}>
-            {saving ? "Signing in…" : "Sign in"}
+          {/* Password */}
+          <div>
+            <label className="text-sm text-gray-300">Password</label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full mt-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
+
+          {/* Login Button */}
+          <button
+            type="submit"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg"
+          >
+            Login
           </button>
-          <Link className="btn btn-ghost" to="/register">Create an account</Link>
+        </form>
+
+        {message && (
+          <p className="text-center mt-4 text-sm text-gray-300">{message}</p>
+        )}
+
+        {/* Register Redirect */}
+        <div className="text-center mt-6">
+          <p className="text-gray-400 text-sm">
+            Don’t have an account?{" "}
+            <Link to="/register" className="text-indigo-400 hover:underline">
+              Create a customer profile
+            </Link>
+          </p>
         </div>
-      </form>
-    </section>
+      </div>
+
+      <p className="text-gray-500 text-xs mt-6">
+        © {new Date().getFullYear()} INSY7314 Bank Portal
+      </p>
+    </div>
   );
 }

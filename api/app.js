@@ -5,7 +5,7 @@ import cors from "cors";
 import morgan from "morgan";
 import hpp from "hpp";
 import { sanitizeRequest } from "./middleware/sanitize.js";
-
+import employeeAuthRoutes from "./routes/employeeAuth.js";
 import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payments.js";
 
@@ -30,8 +30,15 @@ app.use(sanitizeRequest);
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // Main routes
+app.use("/v1/employee", employeeAuthRoutes);
 app.use("/v1/auth", authRoutes);
 app.use("/v1/payments", paymentRoutes);
+
+app.use(cors({
+  origin: ["https://localhost:5173"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 
 // Root route
 app.get("/", (_req, res) => res.json({ ok: true, service: "api" }));

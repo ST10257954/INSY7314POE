@@ -39,5 +39,30 @@ router.get("/", authCustomer, async (req,res)=>{
     beneficiary: p.beneficiary, createdAt: p.createdAt
   })));
 });
+// GET all payments (for employees)
+router.get("/all", async (req, res) => {
+  try {
+    const payments = await Payment.find().sort({ createdAt: -1 });
+    res.json(payments);
+  } catch (err) {
+    res.status(500).json({ msg: "Failed to fetch payments", error: err.message });
+  }
+});
+
+// PUT /verify/:id — mark payment verified
+router.put("/:id/verify", async (req, res) => {
+  try {
+    const updated = await Payment.findByIdAndUpdate(
+      req.params.id,
+      { status: "VERIFIED", updatedAt: new Date() },
+      { new: true }
+    );
+    if (!updated) return res.status(404).json({ msg: "Payment not found" });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ msg: "Verification failed", error: err.message });
+  }
+});
+
 
 export default router; // <-- keep this line (exactly once)
