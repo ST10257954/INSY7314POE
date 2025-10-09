@@ -1,47 +1,43 @@
-// src/lib/api.js
-const API_BASE = "https://localhost:3001/api"; // or http://localhost:3001 if SSL not enabled yet
+// lib/api.js
+import axios from "axios";
 
-// REGISTER user
-export async function registerUser(data) {
-  const res = await fetch(`${API_BASE}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Registration failed");
+const API_BASE = "https://localhost:3443/v1";
+
+// ✅ Automatically include token in all requests
+const api = axios.create({
+  baseURL: API_BASE,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Attach token before every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return await res.json();
+  return config;
+});
+
+// ------------------- PAYMENTS -------------------
+
+// Create a payment
+export async function makePayment(data) {
+  try {
+    const res = await api.post("/payments", data);
+    return res.data;
+  } catch (err) {
+    console.error("❌ makePayment failed:", err.response?.data || err.message);
+    throw err;
+  }
 }
 
-// LOGIN user
-export async function loginUser(data) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Login failed");
+// Get all payments for current user
+export async function getPayments() {
+  try {
+    const res = await api.get("/payments/mine");
+    return res.data;
+  } catch (err) {
+    console.error("❌ getPayments failed:", err.response?.data || err.message);
+    throw err;
   }
-  return await res.json();
-}
-
-// MAKE PAYMENT
-export async function makePayment(data, token) {
-  const res = await fetch(`${API_BASE}/payments`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || "Payment failed");
-  }
-  return await res.json();
 }

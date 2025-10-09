@@ -21,7 +21,13 @@ export default function Register() {
     setMessage("");
 
     try {
-      await axios.post("https://localhost:3443/v1/auth/register", form);
+await axios.post("https://localhost:3443/v1/auth/register", {
+  fullName: form.fullName,
+  idNumber: form.idNumber,
+  accountNo: form.accountNumber, // ✅ fix key name
+  email: form.email,
+  password: form.password,
+});
       setMessage("✅ Account created! Redirecting...");
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {

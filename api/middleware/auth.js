@@ -1,16 +1,28 @@
-// api/middleware/auth.js
 import jwt from "jsonwebtoken";
 
-export function authCustomer(req, res, next) {
-  const h = req.headers.authorization || "";
-  const token = h.startsWith("Bearer ") ? h.slice(7) : null;
-  if (!token) return res.status(401).json({ error: "Missing token" });
+export default function auth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(403).json({ message: "Missing Authorization header" });
+
+  const token = authHeader.split(" ")[1];
+  if (!token) return res.status(403).json({ message: "Missing token" });
+
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    if (payload.role !== "customer") return res.status(403).json({ error: "Forbidden" });
-    req.user = payload; // { sub, role }
+    console.log("🔑 Verifying token:", token);
+    console.log("🧬 Using secret:", process.env.JWT_SECRET);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("✅ Token verified:", decoded);
+
+    const allowedRoles = ["customer", "user", "admin", "employee"];
+if (!allowedRoles.includes(decoded.role)) {
+  return res.status(403).json({ message: "Unauthorized role" });
+}
+
+    req.user = decoded;
     next();
-  } catch {
-    return res.status(401).json({ error: "Invalid token" });
+  } catch (err) {
+    console.error("❌ Invalid or expired token:", err.message);
+    res.status(401).json({ message: "Invalid or expired token" });
   }
 }

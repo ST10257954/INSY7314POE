@@ -1,68 +1,80 @@
-import { Router } from "express";
-import { z } from "zod";
+// routes/payments.js
+import express from "express";
+import auth from "../middleware/auth.js";
 import Payment from "../models/Payment.js";
-import { authCustomer } from "../middleware/auth.js";
 
-const router = Router();
-const SWIFT = /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/;
+const router = express.Router();
 
-const PaymentSchema = z.object({
-  amount:         z.coerce.number().gt(0),
-  currency:       z.enum(["ZAR","USD","EUR","GBP"]),
-  provider:       z.literal("SWIFT"),
-  beneficiary:    z.string().min(2).max(80),
-  beneficiaryAcc: z.string().regex(/^\d{8,20}$/),
-  swiftCode:      z.string().regex(SWIFT)
+// All payment routes require valid customer token
+router.use(auth);
+
+// -------------------- CREATE PAYMENT --------------------
+router.post("/", auth, async (req, res) => {
+  try {
+    const { amount, currency, beneficiary, account, provider } = req.body;
+
+    if (!amount || !currency || !beneficiary || !account || !provider) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // ✅ include swiftCode: provider, since schema requires it
+    const payment = await Payment.create({
+      userId: req.user.sub,
+      amountCents: Math.round(amount * 100),
+      currency,
+      beneficiary,
+      beneficiaryAcc: account,
+      provider,
+      swiftCode: provider,      // 👈 add this line to satisfy schema
+      reference: "online-payment",
+      status: "PENDING",
+    });
+
+    console.log("✅ Payment created:", payment);
+    res.status(201).json(payment);
+  } catch (err) {
+    console.error("❌ Payment creation failed:", err);
+    res.status(500).json({ message: "Payment failed", error: err.message });
+  }
 });
 
-router.post("/", authCustomer, async (req,res)=>{
-  const parsed = PaymentSchema.safeParse(req.body);
-  if(!parsed.success) return res.status(400).json({error:"Invalid input"});
-
-  const p = parsed.data;
-  const created = await Payment.create({
-    userId: req.user.sub,
-    amountCents: Math.round(p.amount * 100),
-    currency: p.currency,
-    provider: p.provider,
-    beneficiary: p.beneficiary,
-    beneficiaryAcc: p.beneficiaryAcc,
-    swiftCode: p.swiftCode
-  });
-  res.status(201).json({ id: created._id });
+// -------------------- Fetch ALL user payments --------------------
+router.get("/", async (req, res) => {
+  try {
+    const payments = await Payment.find({ userId: req.user.sub }).sort({ createdAt: -1 });
+    res.json(payments);
+  } catch (err) {
+    console.error("❌ Fetch payments failed:", err.message);
+    res.status(500).json({ message: "Failed to load payments" });
+  }
 });
 
-router.get("/", authCustomer, async (req,res)=>{
-  const list = await Payment.find({ userId: req.user.sub }).sort({ createdAt: -1 }).lean();
-  res.json(list.map(p => ({
-    id: p._id, amount: p.amountCents/100, currency: p.currency, status: p.status,
-    beneficiary: p.beneficiary, createdAt: p.createdAt
-  })));
-});
-// GET all payments (for employees)
+// -------------------- Fetch ALL PAYMENTS (ADMIN DASHBOARD) --------------------
 router.get("/all", async (req, res) => {
   try {
+    // 🧠 Only allow admins or employees
+    if (req.user.role !== "admin" && req.user.role !== "employee") {
+      return res.status(403).json({ message: "Forbidden: admin access only" });
+    }
+
     const payments = await Payment.find().sort({ createdAt: -1 });
     res.json(payments);
   } catch (err) {
-    res.status(500).json({ msg: "Failed to fetch payments", error: err.message });
+    console.error("❌ Fetch all payments failed:", err.message);
+    res.status(500).json({ message: "Failed to load payments" });
   }
 });
 
-// PUT /verify/:id — mark payment verified
-router.put("/:id/verify", async (req, res) => {
+
+// -------------------- Fetch /mine (used by frontend) --------------------
+router.get("/mine", async (req, res) => {
   try {
-    const updated = await Payment.findByIdAndUpdate(
-      req.params.id,
-      { status: "VERIFIED", updatedAt: new Date() },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ msg: "Payment not found" });
-    res.json(updated);
+    const payments = await Payment.find({ userId: req.user.sub }).sort({ createdAt: -1 });
+    res.json(payments);
   } catch (err) {
-    res.status(500).json({ msg: "Verification failed", error: err.message });
+    console.error("❌ Fetch /mine failed:", err.message);
+    res.status(500).json({ message: "Failed to load payments" });
   }
 });
 
-
-export default router; // <-- keep this line (exactly once)
+export default router;
