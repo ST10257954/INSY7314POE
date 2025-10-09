@@ -7,6 +7,9 @@ import morgan from "morgan";
 import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payments.js";
 
+import hpp from "hpp";
+import mongoSanitize from "express-mongo-sanitize";
+
 
 const app = express();
 
@@ -20,6 +23,9 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/v1/auth", authRoutes);
 app.use("/v1/payments", paymentRoutes);
+
+app.use(hpp());
+app.use(mongoSanitize());
 
 app.get("/", (_req, res) => res.json({ ok: true, service: "api" }));
 
