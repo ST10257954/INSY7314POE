@@ -1,5 +1,12 @@
 import React from "react";
-import { Routes, Route, Link, Navigate, useNavigate } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Link,
+  Navigate,
+  useNavigate,
+} from "react-router-dom";
 import Login from "./Login";
 import Register from "./Register";
 import Payments from "./Payment";
@@ -20,11 +27,16 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
       <header className="flex items-center justify-between px-8 py-4 border-b border-gray-700">
-        <div className="text-lg font-bold text-indigo-400">INSY7314 Bank Client</div>
+        <div className="text-lg font-bold text-indigo-400">
+          INSY7314 Bank Client
+        </div>
         <nav className="space-x-4">
           {!authed && !empAuthed && (
             <>
-              <Link to="/register" className="text-gray-300 hover:text-indigo-400">
+              <Link
+                to="/register"
+                className="text-gray-300 hover:text-indigo-400"
+              >
                 Register
               </Link>
               <Link to="/login" className="text-gray-300 hover:text-indigo-400">
@@ -33,7 +45,11 @@ export default function App() {
             </>
           )}
           {(authed || empAuthed) && (
-            <a href="#logout" onClick={logout} className="text-gray-300 hover:text-red-400">
+            <a
+              href="#logout"
+              onClick={logout}
+              className="text-gray-300 hover:text-red-400"
+            >
               Logout
             </a>
           )}
@@ -45,11 +61,21 @@ export default function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/payments" element={authed ? <Payments /> : <Navigate to="/login" />} />
+
+          {/* Customer area */}
+          <Route
+            path="/payments"
+            element={authed ? <Payments /> : <Navigate to="/login" />}
+          />
+
+          {/* ✅ Employee dashboard */}
           <Route
             path="/admin/dashboard"
             element={empAuthed ? <AdminDashboard /> : <Navigate to="/login" />}
           />
+
+          {/* ✅ Fallback route for any /admin/* */}
+          <Route path="/admin/*" element={<Navigate to="/admin/dashboard" />} />
         </Routes>
       </main>
 

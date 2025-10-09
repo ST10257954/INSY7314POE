@@ -1,35 +1,21 @@
-import express from "express";
-import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import Employee from "../models/Employee.js";
 
-const router = express.Router();
+export default function authEmployee(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(403).json({ message: "Access denied. No token." });
 
-// Employee login (they cannot register themselves)
-router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Find employee by email
-    const emp = await Employee.findOne({ email });
-    if (!emp) return res.status(401).json({ message: "Invalid email or password" });
+    // ✅ Fix: match correct employee role set during login
+    if (decoded.role !== "employee") {
+      return res.status(403).json({ message: "Unauthorized. Not an employee." });
+    }
 
-    // Compare password
-    const match = await bcrypt.compare(password, emp.password);
-    if (!match) return res.status(401).json({ message: "Invalid email or password" });
-
-    // Generate token
-    const token = jwt.sign(
-      { id: emp._id, role: emp.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-
-    res.json({ token, role: emp.role });
+    req.user = decoded;
+    next();
   } catch (err) {
-    console.error("Employee login error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ JWT verification failed:", err);
+    res.status(401).json({ message: "Invalid or expired token" });
   }
-});
-
-export default router;
+}

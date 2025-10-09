@@ -24,11 +24,11 @@ export default function Login() {
       if (role === "employee") {
         localStorage.setItem("employeeToken", res.data.token);
         setMessage("✅ Logged in as employee. Redirecting...");
-        setTimeout(() => navigate("/admin/dashboard"), 1500);
+        setTimeout(() => (window.location.href = "/admin/dashboard"), 1200);
       } else {
         localStorage.setItem("token", res.data.token);
         setMessage("✅ Logged in as customer. Redirecting...");
-        setTimeout(() => navigate("/payments"), 1500);
+        setTimeout(() => (window.location.href = "/payments"), 1200);
       }
     } catch (err) {
       console.error(err);
@@ -94,7 +94,6 @@ export default function Login() {
           <p className="text-center mt-4 text-sm text-gray-300">{message}</p>
         )}
 
-        {/* Register Redirect */}
         <div className="text-center mt-6">
           <p className="text-gray-400 text-sm">
             Don’t have an account?{" "}
