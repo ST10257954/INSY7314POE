@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createPayment, listPayments } from "../lib/api.js";
+import { makePayment as createPayment } from "../lib/api.js";
 
 export default function Payments(){
   const [payments, setPayments] = useState([]);

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../lib/api.js";
 
+
 // keep backslashes literal for the pattern attribute
 const PASS_PATTERN = String.raw`^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d!@#$%^&*()_\-=\[\]{};':",.<>\/?]{8,}$`;
 

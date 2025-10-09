@@ -1,56 +1,47 @@
-// web/src/lib/api.js
-const BASE = import.meta.env.VITE_API_BASE;
+// src/lib/api.js
+const API_BASE = "https://localhost:3001/api"; // or http://localhost:3001 if SSL not enabled yet
 
-function jsonHeaders(extra = {}) {
-  return { "Content-Type": "application/json", ...extra };
-}
-
-async function readError(r) {
-  try { return (await r.text()) || r.statusText; } catch { return r.statusText; }
-}
-
-export async function register(data) {
-  const r = await fetch(`${BASE}/v1/auth/register`, {
+// REGISTER user
+export async function registerUser(data) {
+  const res = await fetch(`${API_BASE}/auth/register`, {
     method: "POST",
-    headers: jsonHeaders(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!r.ok) throw new Error(await readError(r));
-  return r.json();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Registration failed");
+  }
+  return await res.json();
 }
 
-export async function login(data) {
-  const r = await fetch(`${BASE}/v1/auth/login`, {
+// LOGIN user
+export async function loginUser(data) {
+  const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
-    headers: jsonHeaders(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!r.ok) throw new Error(await readError(r));
-  const body = await r.json();
-  localStorage.setItem("token", body.token);
-  return body;
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Login failed");
+  }
+  return await res.json();
 }
 
-export function authHeaders() {
-  const t = localStorage.getItem("token");
-  return t ? { Authorization: `Bearer ${t}` } : {};
-}
-
-export async function createPayment(data) {
-  const r = await fetch(`${BASE}/v1/payments`, {
+// MAKE PAYMENT
+export async function makePayment(data, token) {
+  const res = await fetch(`${API_BASE}/payments`, {
     method: "POST",
-    headers: jsonHeaders(authHeaders()),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify(data),
   });
-  if (!r.ok) throw new Error(await readError(r));
-  return r.json();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Payment failed");
+  }
+  return await res.json();
 }
-
-export async function listPayments() {
-  const r = await fetch(`${BASE}/v1/payments`, { headers: authHeaders() });
-  if (!r.ok) throw new Error(await readError(r));
-  return r.json();
-}
-
-export { login as loginUser };   
-
