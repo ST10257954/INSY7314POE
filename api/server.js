@@ -6,6 +6,8 @@ import https from "https";
 import http from "http";
 import app from "./app.js";
 import { connectDB } from "./db.js";
+import dotenv from "dotenv";
+
 
 const HTTP_PORT = process.env.PORT || 3001;
 const HTTPS_PORT = 3443;
@@ -40,4 +42,9 @@ const redirectApp = (req, res) => {
   http.createServer(redirectApp).listen(HTTP_PORT, () => {
     console.log(`↪️  HTTP (port ${HTTP_PORT}) redirecting to HTTPS`);
   });
+  
+  dotenv.config();
+  console.log("Mongo URI loaded:", process.env.MONGO_URI);
+
+
 })();
