@@ -4,7 +4,7 @@ import Login from "./Login.jsx";
 import Register from "./Register.jsx";
 import Payment from "./Payment.jsx";
 import AdminDashboard from "./AdminDashboard.jsx";
-import "./../index.css";
+import "./../index.css"; // global styles
 
 export default function App() {
   const location = useLocation();
@@ -15,7 +15,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
 
-  // ✅ Keep your existing logic
+  // ✅ Check login state on app load
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -28,14 +28,16 @@ export default function App() {
     }
   }, [location.pathname]);
 
+  // ✅ Protect routes
   const ProtectedPage = ({ element, allowedRoles }) => {
-    if (!isAuthenticated) return <Navigate to="/login" replace />;
+    if (!isAuthenticated)
+      return <Navigate to="/login" state={{ from: location }} replace />;
     if (allowedRoles && !allowedRoles.includes(userRole))
       return <Navigate to="/" replace />;
     return element;
   };
 
-  // ✅ Your original login logic — unchanged
+  // ✅ Login handler (no logic changed)
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -69,31 +71,13 @@ export default function App() {
 
   return (
     <Routes>
+      {/* --- Login Page --- */}
       <Route
         path="/"
         element={
           <div className="login-container">
             <h1 className="login-title">Login</h1>
             <div className="login-card">
-              <div className="social-login">
-                <button className="icon-btn">
-                  <i className="fab fa-google"></i>
-                </button>
-                <button className="icon-btn">
-                  <i className="fab fa-facebook-f"></i>
-                </button>
-                <button className="icon-btn">
-                  <i className="fab fa-linkedin-in"></i>
-                </button>
-                <button className="icon-btn">
-                  <i className="fab fa-apple"></i>
-                </button>
-              </div>
-
-              <div className="divider">
-                <span>Or</span>
-              </div>
-
               <form onSubmit={handleLogin}>
                 <label>Login as</label>
                 <select
@@ -141,17 +125,12 @@ export default function App() {
 
                 <div className="extra-links">
                   <p>
-                    Forgot your password?{" "}
-                    <a href="#" className="link-reset">
-                      Reset Password
-                    </a>
-                  </p>
-                  <p>
                     Don’t have an account?{" "}
                     <a href="/register" className="link-create">
                       Create Account
                     </a>
                   </p>
+                  <p className="footer-text">© 2025 INSY7314 Bank Portal</p>
                 </div>
               </form>
             </div>
@@ -159,15 +138,23 @@ export default function App() {
         }
       />
 
+      {/* --- Other Routes --- */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route
         path="/payment"
-        element={<ProtectedPage element={<Payment />} allowedRoles={["customer"]} />}
+        element={
+          <ProtectedPage element={<Payment />} allowedRoles={["customer"]} />
+        }
       />
       <Route
         path="/admin"
-        element={<ProtectedPage element={<AdminDashboard />} allowedRoles={["employee"]} />}
+        element={
+          <ProtectedPage
+            element={<AdminDashboard />}
+            allowedRoles={["employee"]}
+          />
+        }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -1,34 +1,74 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./../index.css";
 
 function Login() {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    role: "Customer",
+    email: "",
+    password: "",
+  });
+  const [remember, setRemember] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
-    // ✅ Keep your existing login logic here
+    try {
+      const { email, password, role } = formData;
+
+      const response = await fetch(
+        role === "Employee"
+          ? "https://localhost:3443/v1/employee/login"
+          : "https://localhost:3443/v1/auth/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // ✅ Save auth data
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("role", role.toLowerCase());
+
+        // ✅ Navigate without reloading
+        if (role === "Customer") navigate("/payment");
+        else navigate("/admin");
+      } else {
+        alert(data.message || "Invalid credentials");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      alert("Login failed. Check console for details.");
+    }
   };
 
   return (
-    <div className="login-wrapper">
+    <div className="login-container">
+      <h1 className="login-title">Login</h1>
+
       <div className="login-card">
-        <h1 className="login-title">Login</h1>
+        <form onSubmit={handleSubmit}>
+          <label htmlFor="role">Login as</label>
+          <select
+            id="role"
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            className="input-field"
+          >
+            <option value="Customer">Customer</option>
+            <option value="Employee">Employee</option>
+          </select>
 
-        <div className="social-login">
-          <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/281/281764.png" alt="Google" /></a>
-          <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" /></a>
-          <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" alt="LinkedIn" /></a>
-          <a href="#"><img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" alt="Twitter" /></a>
-        </div>
-
-        <div className="divider">or</div>
-
-        <form onSubmit={handleSubmit} className="login-form">
           <label htmlFor="email">E-mail</label>
           <input
             type="email"
@@ -38,6 +78,7 @@ function Login() {
             value={formData.email}
             onChange={handleChange}
             required
+            className="input-field"
           />
 
           <label htmlFor="password">Password</label>
@@ -49,26 +90,33 @@ function Login() {
             value={formData.password}
             onChange={handleChange}
             required
+            className="input-field"
           />
 
-          <div className="remember-me">
-            <input type="checkbox" id="remember" />
+          <div className="remember-row">
+            <input
+              type="checkbox"
+              id="remember"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
             <label htmlFor="remember">Remember Me</label>
           </div>
 
           <button type="submit" className="btn-login">
             Log In
           </button>
-        </form>
 
-        <div className="links">
-          <p>
-            Forgot your password? <a href="#">Reset Password</a>
-          </p>
-          <p>
-            Don’t have an account? <a href="/register">Create Account</a>
-          </p>
-        </div>
+          <div className="extra-links">
+            <p>
+              Don’t have an account?{" "}
+              <a href="/register" className="link-create">
+                Create Account
+              </a>
+            </p>
+            <p className="footer-text">© 2025 INSY7314 Bank Portal</p>
+          </div>
+        </form>
       </div>
     </div>
   );
