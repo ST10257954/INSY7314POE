@@ -12,42 +12,40 @@ const router = express.Router();
 -----------------------------------------------------------------------------*/
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, idNumber, accountNumber, email, password, role } = req.body;
 
-    const existing = await User.findOne({ email: email.trim().toLowerCase() });
-    if (existing)
-      return res.status(400).json({ message: "User already exists" });
+    // ✅ Validate fields
+    if (!name || !idNumber || !accountNumber || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // ✅ Hash the password securely (include PEPPER)
+    const hashedPassword = await bcrypt.hash(password + process.env.PEPPER, 10);
 
+    // ✅ Create and save the new user
     const newUser = new User({
       name,
-      email: email.trim().toLowerCase(),
+      idNumber,
+      accountNumber,
+      email,
       password: hashedPassword,
-      role: role?.toLowerCase() || "customer",
+      role: role || "customer",
     });
 
     await newUser.save();
 
-    const token = jwt.sign(
-      { id: newUser._id, email: newUser.email, role: newUser.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "2h" }
-    );
-
-    res.status(201).json({
-      message: "✅ User registered successfully",
-      token,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-      },
-    });
+    res.status(201).json({ message: "✅ Registration successful" });
   } catch (err) {
     console.error("Register error:", err);
+
+    if (err.code === 11000) {
+      // Handle duplicate email or ID
+      const duplicateField = Object.keys(err.keyValue)[0];
+      return res
+        .status(400)
+        .json({ message: `Duplicate ${duplicateField} detected` });
+    }
+
     res.status(500).json({ message: "Server error during registration" });
   }
 });
@@ -63,7 +61,7 @@ router.post("/login", async (req, res) => {
 
     let account;
 
-    // ✅ Employee login (case-insensitive, ensures proper matching)
+    // ✅ Employee login
     if (roleLower === "employee") {
       account = await Employee.findOne({ email: normalizedEmail });
     } 
@@ -80,14 +78,19 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "User not found" });
     }
 
-    // ✅ Ensure role consistency (avoid crash if missing)
+    // ✅ Ensure role consistency
     const dbRole = account.role ? account.role.toLowerCase() : null;
     if (roleLower && dbRole && roleLower !== dbRole) {
       return res.status(403).json({ message: `Access denied for role: ${role}` });
     }
 
-    // ✅ Compare password hash
-    const isMatch = await bcrypt.compare(password, account.password || "");
+    // ✅ Compare password (try both methods: with and without PEPPER)
+    let isMatch = await bcrypt.compare(password + process.env.PEPPER, account.password || "");
+    if (!isMatch) {
+      // fallback for employees or older hashes
+      isMatch = await bcrypt.compare(password, account.password || "");
+    }
+
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid password" });
     }
