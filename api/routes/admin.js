@@ -1,10 +1,12 @@
+// Route: Handles employee access to pending payments, verification, and SWIFT submission (stripe, 2025).
+
 import express from "express";
 import Payment from "../models/Payment.js";
-import authEmployee from "../middleware/authEmployee.js"; // You’ll create this if not done
+import authEmployee from "../middleware/authEmployee.js"; 
 
 const router = express.Router();
 
-// Get all pending payments (staff view)
+// Get all pending payments (employee view)
 router.get("/pending", authEmployee, async (req, res) => {
   const payments = await Payment.find({ status: "PENDING" }).populate("userId", "fullName email");
   res.json(payments);
@@ -32,3 +34,9 @@ router.put("/submit/:id", authEmployee, async (req, res) => {
 });
 
 export default router;
+
+/* References
+stripe, 2025. International payments 101: What they are and how they work. [Online] 
+Available at: https://stripe.com/resources/more/international-payments-101-what-they-are-and-how-they-work
+[Accessed 02 October 2025]. 
+*/

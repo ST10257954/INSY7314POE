@@ -1,3 +1,5 @@
+// Route: Handles employee registration and login using JWT authentication (stripe, 2025).
+
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -5,7 +7,7 @@ import Employee from "../models/Employee.js";
 
 const router = express.Router();
 
-// ✅ REGISTER (Employee)
+// Register new employee
 router.post("/register", async (req, res) => {
   try {
     const { fullName, email, password, employeeId, role } = req.body;
@@ -31,7 +33,7 @@ router.post("/register", async (req, res) => {
     );
 
     return res.status(201).json({
-      message: "✅ Employee registered successfully",
+      message: "Employee registered successfully",
       token,
       employee: {
         id: newEmp._id,
@@ -46,7 +48,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// ✅ LOGIN (Employee)
+// Employee login
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -64,7 +66,7 @@ router.post("/login", async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "✅ Employee login successful",
+      message: " Employee login successful",
       token,
       employee: {
         id: employee._id,
@@ -80,3 +82,9 @@ router.post("/login", async (req, res) => {
 });
 
 export default router;
+
+/* References
+stripe, 2025. International payments 101: What they are and how they work. [Online] 
+Available at: https://stripe.com/resources/more/international-payments-101-what-they-are-and-how-they-work
+[Accessed 02 October 2025]. 
+*/

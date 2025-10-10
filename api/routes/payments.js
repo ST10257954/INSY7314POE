@@ -1,14 +1,15 @@
-// routes/payments.js
+// Route: Handles customer payment creation, viewing, and employee status updates (stripe, 2025).
+
 import express from "express";
 import auth from "../middleware/auth.js";
 import Payment from "../models/Payment.js";
 
 const router = express.Router();
 
-// ✅ All payment routes require a valid JWT token
+// All payment routes require a valid JWT token (Ibrahim, 2024)
 router.use(auth);
 
-/* -------------------------- CREATE PAYMENT -------------------------- */
+// CREATE PAYMENT 
 router.post("/", async (req, res) => {
   try {
     const { amount, currency, beneficiary, account, provider } = req.body;
@@ -25,13 +26,13 @@ router.post("/", async (req, res) => {
         .json({ message: "User authentication failed — no user ID found" });
     }
 
-    // ✅ Provider-based swiftCode fallback (handles SEPA/ACH safely)
+    // Auto-assign SWIFT/SEPA/ACH code
     let swiftCodeValue = "N/A";
     if (provider === "SWIFT") swiftCodeValue = "ABCZAZJJ";
     else if (provider === "SEPA") swiftCodeValue = "SEPA0000";
     else if (provider === "ACH") swiftCodeValue = "ACH0000";
 
-    // ✅ Create payment safely
+    // Save payment
     const payment = await Payment.create({
       userId,
       amountCents: Math.round(amount * 100),
@@ -39,22 +40,22 @@ router.post("/", async (req, res) => {
       beneficiary,
       beneficiaryAcc: account,
       provider,
-      swiftCode: swiftCodeValue, // always defined & schema-safe
+      swiftCode: swiftCodeValue,
       reference: "online-payment",
       status: "PENDING",
     });
 
-    console.log("✅ Payment created:", payment._id);
+    console.log("Payment created:", payment._id);
     res.status(201).json(payment);
   } catch (err) {
-    console.error("❌ Payment creation failed:", err);
+    console.error("Payment creation failed:", err);
     res
       .status(500)
       .json({ message: "Payment failed", error: err.message || err });
   }
 });
 
-/* ---------------------- FETCH USER’S OWN PAYMENTS ------------------- */
+//FETCH USER’S OWN PAYMENTS 
 router.get("/mine", async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -66,12 +67,12 @@ router.get("/mine", async (req, res) => {
     const payments = await Payment.find({ userId }).sort({ createdAt: -1 });
     res.json(payments);
   } catch (err) {
-    console.error("❌ Fetch /mine failed:", err.message);
+    console.error("Fetch /mine failed:", err.message);
     res.status(500).json({ message: "Failed to load payments" });
   }
 });
 
-/* ---------------- FETCH ALL PAYMENTS (Employee/Admin) ---------------- */
+//FETCH ALL PAYMENTS (Employee/Admin) 
 router.get("/all", async (req, res) => {
   try {
     if (req.user.role !== "employee" && req.user.role !== "admin") {
@@ -83,12 +84,12 @@ router.get("/all", async (req, res) => {
     const payments = await Payment.find().sort({ createdAt: -1 });
     res.json(payments);
   } catch (err) {
-    console.error("❌ Fetch all payments failed:", err.message);
+    console.error("Fetch all payments failed:", err.message);
     res.status(500).json({ message: "Failed to load payments" });
   }
 });
 
-/* ---------------- EMPLOYEE: UPDATE PAYMENT STATUS ------------------- */
+//EMPLOYEE: UPDATE PAYMENT STATUS
 router.patch("/:id/status", async (req, res) => {
   try {
     if (req.user.role !== "employee" && req.user.role !== "admin") {
@@ -113,12 +114,21 @@ router.patch("/:id/status", async (req, res) => {
 
     if (!payment) return res.status(404).json({ message: "Payment not found" });
 
-    console.log(`✅ Payment ${id} marked as ${newStatus}`);
+    console.log(`Payment ${id} marked as ${newStatus}`);
     res.json(payment);
   } catch (err) {
-    console.error("❌ Failed to update payment status:", err.message);
+    console.error("Failed to update payment status:", err.message);
     res.status(500).json({ message: "Server error updating payment status" });
   }
 });
 
 export default router;
+
+/* References
+stripe, 2025. International payments 101: What they are and how they work. [Online] 
+Available at: https://stripe.com/resources/more/international-payments-101-what-they-are-and-how-they-work
+[Accessed 02 October 2025]. 
+Ibrahim, M., 2024. What is a JWT? Understanding JSON Web Tokens. [Online] 
+Available at: https://supertokens.com/blog/what-is-jwt
+[Accessed 20 August 2025].
+*/

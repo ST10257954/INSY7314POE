@@ -1,4 +1,4 @@
-# SSL certificates (do not commit to GitHub)
+# SSL certificates (ensures it does not commit to GitHub)
 key.pem
 cert.pem
 

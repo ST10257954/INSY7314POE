@@ -1,3 +1,5 @@
+// Component: Main application router that manages authentication, roles, and route protection (J.P.Morgan, 2025).
+
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Login from "./Login.jsx";
@@ -15,7 +17,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
 
-  // ✅ Check login state on app load
+  // Check authentication and role when navigating
   useEffect(() => {
     const token = localStorage.getItem("token");
     const role = localStorage.getItem("role");
@@ -28,7 +30,7 @@ export default function App() {
     }
   }, [location.pathname]);
 
-  // ✅ Protect routes
+  // Protect routes
   const ProtectedPage = ({ element, allowedRoles }) => {
     if (!isAuthenticated)
       return <Navigate to="/login" state={{ from: location }} replace />;
@@ -37,7 +39,7 @@ export default function App() {
     return element;
   };
 
-  // ✅ Login handler (no logic changed)
+  // Handle login submission for customers and employees
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -58,6 +60,8 @@ export default function App() {
         localStorage.setItem("role", role.toLowerCase());
         setIsAuthenticated(true);
         setUserRole(role.toLowerCase());
+
+  // Redirect based on role
         if (role === "Customer") window.location.href = "/payment";
         else window.location.href = "/admin";
       } else {
@@ -160,3 +164,9 @@ export default function App() {
     </Routes>
   );
 }
+
+/*References
+J.P.Morgan, 2025. What is a payment gateway. [Online] 
+Available at: https://www.jpmorgan.com/insights/treasury/treasury-management/payment-gateways-what-they-are-and-how-to-choose-one
+[Accessed 07 October 2025].
+ */

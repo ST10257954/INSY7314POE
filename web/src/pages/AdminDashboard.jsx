@@ -1,3 +1,4 @@
+// Component: Displays and manages all customer payments for employees/admins (Bratslavsky, 2024).
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -5,6 +6,7 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState([]);
   const [message, setMessage] = useState("");
 
+    // Fetch all payments from backend
   const fetchPayments = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -15,10 +17,11 @@ export default function AdminDashboard() {
       setMessage("");
     } catch (err) {
       console.error(err);
-      setMessage("❌ Unable to load payments.");
+      setMessage("Unable to load payments.");
     }
   };
 
+    // Update payment status (verify or submit)
   const updatePaymentStatus = async (id, action) => {
     try {
       const token = localStorage.getItem("token");
@@ -33,15 +36,16 @@ export default function AdminDashboard() {
         }
       );
 
-      if (action === "verify") setMessage("✅ Payment verified successfully!");
-      if (action === "submit") setMessage("✅ Payment submitted to SWIFT!");
-      fetchPayments();
+      if (action === "verify") setMessage("Payment verified successfully!");
+      if (action === "submit") setMessage("Payment submitted to SWIFT!");
+      fetchPayments(); // Refresh list after update
     } catch (err) {
-      console.error("❌ Payment status update failed:", err);
-      setMessage("❌ Action failed. Please try again.");
+      console.error("Payment status update failed:", err);
+      setMessage("Action failed. Please try again.");
     }
   };
 
+// Load payments when component mounts
   useEffect(() => {
     fetchPayments();
   }, []);
@@ -111,3 +115,9 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+/*References
+Bratslavsky, P., 2024. How Frontend and Backend Components Interact in a Full-Stack App. [Online] 
+Available at: https://strapi.io/blog/how-frontend-and-backend-components-interact-in-a-full-stack-app
+[Accessed 06 October 2025].
+ */

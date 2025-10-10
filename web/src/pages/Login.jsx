@@ -1,3 +1,5 @@
+// Component: Handles user login for both customers and employees (Gillis, et al., 2024).
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./../index.css";
@@ -12,10 +14,12 @@ function Login() {
   });
   const [remember, setRemember] = useState(false);
 
+    // Track form input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+    // Submit login request
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -35,11 +39,11 @@ function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        // ✅ Save auth data
+        //Save auth data
         localStorage.setItem("token", data.token);
         localStorage.setItem("role", role.toLowerCase());
 
-        // ✅ Navigate without reloading
+        // Navigate based on role
         if (role === "Customer") navigate("/payment");
         else navigate("/admin");
       } else {
@@ -123,3 +127,9 @@ function Login() {
 }
 
 export default Login;
+
+/*References
+Gillis, A. S., Lutkevich, B. & Nolle, T., 2024. What is an API (application programming interface)?. [Online] 
+Available at: https://www.techtarget.com/searchapparchitecture/definition/application-program-interface-API
+[Accessed 24 August 2025].
+ */

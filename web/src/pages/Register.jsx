@@ -1,3 +1,5 @@
+// Component: Handles new customer registration and redirects to login upon success (J.P.Morgan, 2025).
+
 import React, { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -15,9 +17,11 @@ export default function Register() {
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
 
+    // Track input values
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
+    // Handle registration submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -33,7 +37,7 @@ export default function Register() {
       });
 
       if (res.status === 201 || res.status === 200) {
-        setMessage("✅ Registration successful! Redirecting...");
+        setMessage("Registration successful! Redirecting...");
         setTimeout(() => navigate("/login"), 1200);
       }
     } catch (err) {
@@ -143,3 +147,9 @@ export default function Register() {
     </div>
   );
 }
+
+/*Reference
+J.P.Morgan, 2025. What is a payment gateway. [Online] 
+Available at: https://www.jpmorgan.com/insights/treasury/treasury-management/payment-gateways-what-they-are-and-how-to-choose-one
+[Accessed 07 October 2025].
+ */

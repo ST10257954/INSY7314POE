@@ -1,3 +1,5 @@
+// Entry Point: Renders the React app and wraps it with BrowserRouter for routing (Raptis, 2019).
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";

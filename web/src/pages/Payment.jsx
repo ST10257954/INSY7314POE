@@ -1,3 +1,5 @@
+// Component: Allows customers to make new payments and view their own transaction history (J.P.Morgan, 2025).
+
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { makePayment } from "../lib/api.js";
@@ -13,6 +15,7 @@ export default function Payment() {
     provider: "SWIFT",
   });
 
+    // Fetch user’s own payments
   const listPayments = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -29,7 +32,7 @@ export default function Payment() {
 
       setPayments(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.error("❌ Failed to fetch payments:", err.response?.data || err.message);
+      console.error("Failed to fetch payments:", err.response?.data || err.message);
     }
   };
 
@@ -37,6 +40,7 @@ export default function Payment() {
     listPayments();
   }, []);
 
+    // Submit new payment
   const onSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -49,6 +53,7 @@ export default function Payment() {
         provider: form.provider,
       });
 
+            // Reset form
       setForm({
         amount: "",
         currency: "ZAR",
@@ -59,7 +64,7 @@ export default function Payment() {
 
       await listPayments();
     } catch (err) {
-      console.error("❌ Payment failed:", err.response?.data || err.message);
+      console.error("Payment failed:", err.response?.data || err.message);
       alert("Payment failed: " + (err.response?.data?.message || "Unknown error"));
     } finally {
       setSaving(false);
@@ -163,3 +168,9 @@ export default function Payment() {
     </div>
   );
 }
+
+/*References
+J.P.Morgan, 2025. What is a payment gateway. [Online] 
+Available at: https://www.jpmorgan.com/insights/treasury/treasury-management/payment-gateways-what-they-are-and-how-to-choose-one
+[Accessed 07 October 2025].
+ */
