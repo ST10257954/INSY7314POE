@@ -1,84 +1,118 @@
-// C:\Users\OEM\Desktop\insy7314POE\INSY7314PART2DRAFT\api\routes\auth.js
-import { Router } from "express";
-import bcrypt from "bcrypt";
+// routes/auth.js
+import express from "express";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import crypto from "crypto";
-import { z } from "zod";
 import User from "../models/User.js";
+import Employee from "../models/Employee.js";
 
-const router = Router();
-const PEPPER = process.env.PEPPER || ""; // fallback empty (should always exist)
+const router = express.Router();
 
-// -------------------- SCHEMAS --------------------
-const RegisterSchema = z.object({
-  fullName:  z.string().min(2).max(80),
-  idNumber:  z.string().regex(/^\d{6,13}$/),
-  accountNo: z.string().regex(/^\d{8,20}$/),
-  email:     z.string().email(),
-  password:  z.string().min(8).max(64)
-             .regex(/[A-Z]/).regex(/[a-z]/).regex(/\d/).regex(/[^\w\s]/),
-});
-
-const LoginSchema = z.object({
-  email:    z.string().email(),
-  password: z.string().min(8)
-});
-
-// -------------------- REGISTER --------------------
+/* -------------------------------- REGISTER ----------------------------------
+   Customers register here; employees are assumed to already exist in DB.
+-----------------------------------------------------------------------------*/
 router.post("/register", async (req, res) => {
-  const parsed = RegisterSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
-
-  const { fullName, idNumber, accountNo, email, password } = parsed.data;
-  const exists = await User.findOne({ $or: [{ email }, { idNumber }, { accountNo }] });
-  if (exists) return res.status(409).json({ error: "User already exists" });
-
   try {
-    // Combine password + pepper before hashing (server-only secret)
-    const combined = password + PEPPER;
-    const passHash = await bcrypt.hash(combined, 12);
+    const { name, email, password, role } = req.body;
 
-    const user = await User.create({
-      fullName,
-      idNumber,
-      accountNo,
-      email,
-      passHash,
-      role: "customer",
+    const existing = await User.findOne({ email: email.trim().toLowerCase() });
+    if (existing)
+      return res.status(400).json({ message: "User already exists" });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({
+      name,
+      email: email.trim().toLowerCase(),
+      password: hashedPassword,
+      role: role?.toLowerCase() || "customer",
     });
 
-    res.status(201).json({ id: user._id });
-  } catch (err) {
-    console.error("Registration error:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// -------------------- LOGIN --------------------
-router.post("/login", async (req, res) => {
-  const parsed = LoginSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
-
-  const { email, password } = parsed.data;
-  const user = await User.findOne({ email });
-  if (!user) return res.status(401).json({ error: "Bad credentials" });
-
-  try {
-    // Combine entered password + same pepper
-    const combined = password + PEPPER;
-    const ok = await bcrypt.compare(combined, user.passHash);
-    if (!ok) return res.status(401).json({ error: "Bad credentials" });
+    await newUser.save();
 
     const token = jwt.sign(
-      { sub: user._id.toString(), role: user.role },
+      { id: newUser._id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET,
-      { expiresIn: "20m" }
+      { expiresIn: "2h" }
     );
-    res.json({ token });
+
+    res.status(201).json({
+      message: "✅ User registered successfully",
+      token,
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+      },
+    });
   } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Register error:", err);
+    res.status(500).json({ message: "Server error during registration" });
   }
 });
 
-export default router; // keep exactly once
+/* -------------------------------- LOGIN -------------------------------------
+   Handles both customers and employees.
+-----------------------------------------------------------------------------*/
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password, role } = req.body;
+    const roleLower = role?.toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    let account;
+
+    // ✅ Employee login (case-insensitive, ensures proper matching)
+    if (roleLower === "employee") {
+      account = await Employee.findOne({ email: normalizedEmail });
+    } 
+    // ✅ Customer login
+    else {
+      account = await User.findOne({ email: normalizedEmail });
+    }
+
+    console.log("Looking for user:", normalizedEmail);
+    console.log("Found account:", account ? account.email : "❌ None");
+
+    // Handle missing user
+    if (!account) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    // ✅ Ensure role consistency (avoid crash if missing)
+    const dbRole = account.role ? account.role.toLowerCase() : null;
+    if (roleLower && dbRole && roleLower !== dbRole) {
+      return res.status(403).json({ message: `Access denied for role: ${role}` });
+    }
+
+    // ✅ Compare password hash
+    const isMatch = await bcrypt.compare(password, account.password || "");
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    // ✅ Generate token
+    const token = jwt.sign(
+      { id: account._id, email: account.email, role: dbRole || account.role || roleLower },
+      process.env.JWT_SECRET,
+      { expiresIn: "2h" }
+    );
+
+    res.status(200).json({
+      message: "✅ Login successful",
+      token,
+      user: {
+        id: account._id,
+        name: account.name || account.fullName,
+        email: account.email,
+        role: dbRole || account.role || roleLower,
+      },
+    });
+  } catch (err) {
+    console.error("❌ Login error:", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+export default router;

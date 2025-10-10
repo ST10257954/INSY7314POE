@@ -1,4 +1,3 @@
-// api/models/Employee.js
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 
@@ -7,7 +6,7 @@ const employeeSchema = new mongoose.Schema({
   employeeId: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, default: "staff" }, // staff or admin
+  role: { type: String, default: "employee" },
 });
 
 // Hash password before saving
