@@ -5,19 +5,20 @@ import Payment from "../models/Payment.js";
 
 const router = express.Router();
 
-// All payment routes require valid customer token
+// ✅ All payment routes require valid JWT token
 router.use(auth);
 
-// -------------------- CREATE PAYMENT --------------------
+// -------------------- CREATE PAYMENT (Customer) --------------------
 router.post("/", auth, async (req, res) => {
   try {
     const { amount, currency, beneficiary, account, provider } = req.body;
 
+    // Validate all required fields
     if (!amount || !currency || !beneficiary || !account || !provider) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    // ✅ include swiftCode: provider, since schema requires it
+    // ✅ Create and store new payment
     const payment = await Payment.create({
       userId: req.user.sub,
       amountCents: Math.round(amount * 100),
@@ -25,7 +26,7 @@ router.post("/", auth, async (req, res) => {
       beneficiary,
       beneficiaryAcc: account,
       provider,
-      swiftCode: provider,      // 👈 add this line to satisfy schema
+      swiftCode: provider, // required by schema
       reference: "online-payment",
       status: "PENDING",
     });
@@ -38,7 +39,7 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-// -------------------- Fetch ALL user payments --------------------
+// -------------------- FETCH USER'S OWN PAYMENTS --------------------
 router.get("/", async (req, res) => {
   try {
     const payments = await Payment.find({ userId: req.user.sub }).sort({ createdAt: -1 });
@@ -49,12 +50,11 @@ router.get("/", async (req, res) => {
   }
 });
 
-// -------------------- Fetch ALL PAYMENTS (ADMIN DASHBOARD) --------------------
+// -------------------- FETCH ALL PAYMENTS (Admin/Employee Dashboard) --------------------
 router.get("/all", async (req, res) => {
   try {
-    // 🧠 Only allow admins or employees
     if (req.user.role !== "admin" && req.user.role !== "employee") {
-      return res.status(403).json({ message: "Forbidden: admin access only" });
+      return res.status(403).json({ message: "Forbidden: admin or employee access only" });
     }
 
     const payments = await Payment.find().sort({ createdAt: -1 });
@@ -65,8 +65,7 @@ router.get("/all", async (req, res) => {
   }
 });
 
-
-// -------------------- Fetch /mine (used by frontend) --------------------
+// -------------------- FETCH MINE (for convenience / React hook) --------------------
 router.get("/mine", async (req, res) => {
   try {
     const payments = await Payment.find({ userId: req.user.sub }).sort({ createdAt: -1 });
@@ -74,6 +73,40 @@ router.get("/mine", async (req, res) => {
   } catch (err) {
     console.error("❌ Fetch /mine failed:", err.message);
     res.status(500).json({ message: "Failed to load payments" });
+  }
+});
+
+// -------------------- EMPLOYEE: VERIFY / SUBMIT TO SWIFT --------------------
+router.patch("/:id/status", async (req, res) => {
+  try {
+    // Only allow employees or admins
+    if (req.user.role !== "employee" && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden: employee access only" });
+    }
+
+    const { id } = req.params;
+    const { action } = req.body;
+
+    // Determine next status
+    let newStatus;
+    if (action === "verify") newStatus = "VERIFIED";
+    else if (action === "submit") newStatus = "SUBMITTED_TO_SWIFT";
+    else return res.status(400).json({ message: "Invalid action" });
+
+    // Update the payment
+    const payment = await Payment.findByIdAndUpdate(
+      id,
+      { status: newStatus, updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!payment) return res.status(404).json({ message: "Payment not found" });
+
+    console.log(`✅ Payment ${id} marked as ${newStatus}`);
+    res.json(payment);
+  } catch (err) {
+    console.error("❌ Failed to update payment status:", err.message);
+    res.status(500).json({ message: "Server error updating payment status" });
   }
 });
 
