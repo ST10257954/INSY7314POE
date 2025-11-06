@@ -56,7 +56,7 @@ router.post("/login", async (req, res) => {
     const employee = await Employee.findOne({ email });
     if (!employee) return res.status(401).json({ message: "Employee not found" });
 
-    const match = await bcrypt.compare(password, employee.password);
+const match = await bcrypt.compare(password + process.env.PEPPER, employee.password);
     if (!match) return res.status(401).json({ message: "Invalid password" });
 
     const token = jwt.sign(
